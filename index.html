@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="pl">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Symulator ruchu ulicznego – tworzenie korków</title>
+    <link
+      rel="icon"
+      href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='20' fill='%232563eb'/%3E%3Cpath d='M24 65h52v10H24zM30 35h40v20H30z' fill='white'/%3E%3C/svg%3E"
+    />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <div class="page">
+      <header>
+        <h1>Symulator ruchu ulicznego</h1>
+        <p>
+          Model opiera się na ruchu samochodów po zamkniętej pętli. Losowe
+          spowolnienia przy wysokim zagęszczeniu powodują powstawanie fal korków.
+        </p>
+      </header>
+
+      <section class="controls">
+        <div class="control">
+          <label for="density">Liczba aut</label>
+          <input id="density" type="range" min="20" max="140" value="80" />
+          <span id="densityValue">80</span>
+        </div>
+        <div class="control">
+          <label for="maxSpeed">Maksymalna prędkość</label>
+          <input id="maxSpeed" type="range" min="6" max="20" value="12" />
+          <span id="maxSpeedValue">12</span>
+        </div>
+        <div class="control">
+          <label for="slowdown">Losowe hamowanie</label>
+          <input id="slowdown" type="range" min="0" max="0.4" step="0.01" value="0.12" />
+          <span id="slowdownValue">0.12</span>
+        </div>
+        <div class="control">
+          <label for="bottleneck">Zwężenie drogi</label>
+          <input id="bottleneck" type="range" min="0" max="0.8" step="0.05" value="0.35" />
+          <span id="bottleneckValue">0.35</span>
+        </div>
+        <div class="buttons">
+          <button id="toggle">Pauza</button>
+          <button id="reset">Resetuj</button>
+        </div>
+      </section>
+
+      <section class="simulation">
+        <canvas id="road" width="900" height="520"></canvas>
+        <div class="stats">
+          <div>
+            <h3>Średnia prędkość</h3>
+            <p id="avgSpeed">0</p>
+          </div>
+          <div>
+            <h3>Samochody w korku</h3>
+            <p id="slowCars">0</p>
+          </div>
+          <div>
+            <h3>Wskazówka</h3>
+            <p>
+              Zwiększ liczbę aut, losowe hamowanie lub zwężenie drogi, aby
+              zobaczyć narastanie zatorów.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      <footer>
+        <p>
+          Symulacja edukacyjna: nawet przy braku przeszkód chwilowe spowolnienia
+          potrafią stworzyć korek.
+        </p>
+      </footer>
+    </div>
+
+    <script src="app.js"></script>
+  </body>
+</html>
