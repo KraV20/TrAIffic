@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="pl">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Symulator ruchu ulicznego</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <main class="app">
+    <header class="app__header">
+      <div>
+        <p class="app__kicker">Symulator ruchu</p>
+        <h1>Symulator ruchu ulicznego</h1>
+        <p class="app__subtitle">Skrzyżowania, ronda i sygnalizacja świetlna z różnymi opcjami sterowania.</p>
+      </div>
+      <div class="app__stats" id="stats">
+        <div>
+          <span>Średnia prędkość</span>
+          <strong id="avgSpeed">0 km/h</strong>
+        </div>
+        <div>
+          <span>Aktywne pojazdy</span>
+          <strong id="activeCars">0</strong>
+        </div>
+      </div>
+    </header>
+
+    <section class="controls">
+      <div class="control">
+        <label for="layout">Układ drogi</label>
+        <select id="layout">
+          <option value="intersection">Skrzyżowanie 4-wlotowe</option>
+          <option value="roundabout">Rondo</option>
+          <option value="tjunction">Skrzyżowanie T</option>
+        </select>
+      </div>
+      <div class="control">
+        <label for="signalMode">Sygnalizacja</label>
+        <select id="signalMode">
+          <option value="auto">Automatyczna</option>
+          <option value="manual">Ręczna</option>
+          <option value="off">Wyłączona</option>
+        </select>
+      </div>
+      <div class="control">
+        <label for="density">Natężenie ruchu</label>
+        <input id="density" type="range" min="1" max="10" value="5" />
+        <span id="densityValue">5</span>
+      </div>
+      <div class="control">
+        <label for="speed">Limit prędkości</label>
+        <input id="speed" type="range" min="20" max="70" value="45" />
+        <span id="speedValue">45 km/h</span>
+      </div>
+      <div class="control control--row">
+        <button id="toggle" class="button button--primary">Start</button>
+        <button id="reset" class="button button--ghost">Reset</button>
+      </div>
+      <div class="control">
+        <label>Opcje dodatkowe</label>
+        <div class="toggle-group">
+          <label><input type="checkbox" id="pedestrians" checked /> Piesi</label>
+          <label><input type="checkbox" id="publicTransport" checked /> Transport publiczny</label>
+          <label><input type="checkbox" id="incidents" /> Zdarzenia losowe</label>
+        </div>
+      </div>
+    </section>
+
+    <section class="canvas-wrap">
+      <canvas id="simCanvas" width="960" height="540" aria-label="Symulacja ruchu"></canvas>
+      <div class="legend">
+        <span><i class="legend__dot legend__dot--car"></i>Pojazdy</span>
+        <span><i class="legend__dot legend__dot--bus"></i>Autobusy</span>
+        <span><i class="legend__dot legend__dot--light"></i>Światła</span>
+      </div>
+    </section>
+  </main>
+
+  <script src="app.js"></script>
+</body>
+</html>
