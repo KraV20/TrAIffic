@@ -15,13 +15,22 @@ const pedestriansToggle = document.getElementById("pedestrians");
 const publicTransportToggle = document.getElementById("publicTransport");
 const incidentsToggle = document.getElementById("incidents");
 
+const baseCanvasSize = { width: 960, height: 540 };
 const laneWidth = 14;
+const crossings = [
+  { x: 430, y: 222, w: 100, h: 12 },
+  { x: 430, y: 306, w: 100, h: 12 },
+  { x: 456, y: 232, w: 12, h: 76 },
+  { x: 494, y: 232, w: 12, h: 76 },
+];
+const incidentZones = [{ x: 620, y: 210, r: 18 }];
 const state = {
   running: false,
   cars: [],
   ticks: 0,
   signalPhase: 0,
   lastSpawn: 0,
+  spawnsCache: new Map(),
 };
 
 const layouts = {
@@ -84,6 +93,16 @@ function buildSpawns(layout) {
   return spawns;
 }
 
+function resizeCanvas() {
+  const rect = canvas.getBoundingClientRect();
+  const dpr = window.devicePixelRatio || 1;
+  const scaleX = rect.width / baseCanvasSize.width;
+  const scaleY = rect.height / baseCanvasSize.height;
+  canvas.width = rect.width * dpr;
+  canvas.height = rect.height * dpr;
+  ctx.setTransform(scaleX * dpr, 0, 0, scaleY * dpr, 0, 0);
+}
+
 function createSpawn(road, dir, laneIndex) {
   const laneOffset = getLaneOffset(road.orientation, dir, laneIndex);
   if (road.orientation === "h") {
@@ -120,8 +139,12 @@ function getLaneOffset(orientation, dir, laneIndex) {
 
 function spawnCar() {
   const config = layouts[layoutSelect.value];
-  config.spawns = config.spawns || buildSpawns(config);
-  const spawn = config.spawns[Math.floor(Math.random() * config.spawns.length)];
+  state.spawnsCache = state.spawnsCache || new Map();
+  if (!state.spawnsCache.has(layoutSelect.value)) {
+    state.spawnsCache.set(layoutSelect.value, buildSpawns(config));
+  }
+  const spawns = state.spawnsCache.get(layoutSelect.value);
+  const spawn = spawns[Math.floor(Math.random() * spawns.length)];
   const busChance = publicTransportToggle.checked ? 0.18 : 0;
   const isBus = Math.random() < busChance;
   state.cars.push({
@@ -166,13 +189,15 @@ function updateCars() {
     const leadDistance = getLeadDistance(car, state.cars);
     const minGap = car.size * 2.6;
     const slowGap = car.size * 5;
+    const environment = getEnvironmentEffects(car);
+    const adjustedBase = car.baseSpeed * environment.slowdown;
 
-    if (stopping || leadDistance < minGap) {
+    if (stopping || environment.mustStop || leadDistance < minGap) {
       car.speed = 0;
     } else if (leadDistance < slowGap) {
-      car.speed = car.baseSpeed * 0.35;
+      car.speed = adjustedBase * 0.35;
     } else {
-      car.speed = car.baseSpeed;
+      car.speed = adjustedBase;
     }
 
     const nextX = car.x + car.vx * car.speed;
@@ -227,6 +252,51 @@ function willCollide(car, nextX, nextY, cars) {
     const dy = other.y - nextY;
     return Math.hypot(dx, dy) < buffer + other.size;
   });
+}
+
+function getEnvironmentEffects(car) {
+  let slowdown = 1;
+  let mustStop = false;
+
+  if (pedestriansToggle.checked) {
+    const crossingDistance = getNearestCrossingDistance(car);
+    if (crossingDistance < 12) {
+      mustStop = true;
+    } else if (crossingDistance < 28) {
+      slowdown = Math.min(slowdown, 0.55);
+    }
+  }
+
+  if (incidentsToggle.checked) {
+    const incidentDistance = getNearestIncidentDistance(car);
+    if (incidentDistance < 18) {
+      mustStop = true;
+    } else if (incidentDistance < 40) {
+      slowdown = Math.min(slowdown, 0.45);
+    }
+  }
+
+  return { slowdown, mustStop };
+}
+
+function getNearestCrossingDistance(car) {
+  if (!crossings.length) return Number.POSITIVE_INFINITY;
+  return Math.min(...crossings.map((crossing) => distanceToRect(car.x, car.y, crossing)));
+}
+
+function getNearestIncidentDistance(car) {
+  if (!incidentZones.length) return Number.POSITIVE_INFINITY;
+  return Math.min(...incidentZones.map((incident) => distanceToCircle(car.x, car.y, incident)));
+}
+
+function distanceToRect(x, y, rect) {
+  const dx = Math.max(rect.x - x, 0, x - (rect.x + rect.w));
+  const dy = Math.max(rect.y - y, 0, y - (rect.y + rect.h));
+  return Math.hypot(dx, dy);
+}
+
+function distanceToCircle(x, y, circle) {
+  return Math.hypot(circle.x - x, circle.y - y) - circle.r;
 }
 
 function shouldStop(car, layout, signals) {
@@ -350,12 +420,7 @@ function drawRoundabout(roundabout) {
 function drawCrossings() {
   if (!pedestriansToggle.checked) return;
   ctx.fillStyle = "rgba(226,232,240,0.7)";
-  [
-    { x: 430, y: 222, w: 100, h: 12 },
-    { x: 430, y: 306, w: 100, h: 12 },
-    { x: 456, y: 232, w: 12, h: 76 },
-    { x: 494, y: 232, w: 12, h: 76 },
-  ].forEach((cross) => ctx.fillRect(cross.x, cross.y, cross.w, cross.h));
+  crossings.forEach((cross) => ctx.fillRect(cross.x, cross.y, cross.w, cross.h));
 }
 
 function drawSignals(layout) {
@@ -386,12 +451,14 @@ function drawCars() {
 function drawIncidents() {
   if (!incidentsToggle.checked) return;
   ctx.fillStyle = "rgba(248, 113, 113, 0.35)";
-  ctx.beginPath();
-  ctx.arc(620, 210, 18, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.strokeStyle = "rgba(248, 113, 113, 0.8)";
-  ctx.lineWidth = 2;
-  ctx.stroke();
+  incidentZones.forEach((incident) => {
+    ctx.beginPath();
+    ctx.arc(incident.x, incident.y, incident.r, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle = "rgba(248, 113, 113, 0.8)";
+    ctx.lineWidth = 2;
+    ctx.stroke();
+  });
 }
 
 function tick() {
@@ -414,7 +481,11 @@ function render() {
   drawCars();
 
   const speedLimit = Number(speedInput.value);
-  const avgSpeed = state.cars.length ? Math.round(speedLimit * 0.78) : 0;
+  const avgRatio = state.cars.length
+    ? state.cars.reduce((sum, car) => sum + (car.baseSpeed ? car.speed / car.baseSpeed : 0), 0) /
+      state.cars.length
+    : 0;
+  const avgSpeed = Math.round(speedLimit * avgRatio);
   avgSpeedEl.textContent = `${avgSpeed} km/h`;
   activeCarsEl.textContent = state.cars.length;
 }
@@ -463,4 +534,10 @@ toggleBtn.addEventListener("click", () => {
   }
 });
 
+window.addEventListener("resize", () => {
+  resizeCanvas();
+  render();
+});
+
+resizeCanvas();
 render();
